@@ -12,6 +12,7 @@ package net.mamoe.mirai.utils
 
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.network.LoginFailedException
+import net.mamoe.mirai.network.RetryLaterException
 import net.mamoe.mirai.utils.LoginSolver.Companion.Default
 
 
@@ -23,10 +24,16 @@ import net.mamoe.mirai.utils.LoginSolver.Companion.Default
  */
 public actual abstract class LoginSolver public actual constructor() {
     /**
-     * 处理图片验证码.
+     * 处理图片验证码, 返回图片验证码内容.
      *
      * 返回 `null` 以表示无法处理验证码, 将会刷新验证码或重试登录.
-     * 抛出一个 [LoginFailedException] 以正常地终止登录, 抛出任意其他 [Exception] 将视为异常终止
+     *
+     * ## 异常类型
+     *
+     * 抛出一个 [LoginFailedException] 以正常地终止登录, 并可建议系统进行重连或停止 bot (通过 [LoginFailedException.killBot]).
+     * 例如抛出 [RetryLaterException] 可让 bot 重新进行一次登录.
+     *
+     * 抛出任意其他 [Throwable] 将视为验证码解决器的自身错误.
      *
      * @throws LoginFailedException
      */
@@ -43,7 +50,13 @@ public actual abstract class LoginSolver public actual constructor() {
      * 处理滑动验证码.
      *
      * 返回 `null` 以表示无法处理验证码, 将会刷新验证码或重试登录.
-     * 抛出一个 [LoginFailedException] 以正常地终止登录, 抛出任意其他 [Exception] 将视为异常终止
+     *
+     * ## 异常类型
+     *
+     * 抛出一个 [LoginFailedException] 以正常地终止登录, 并可建议系统进行重连或停止 bot (通过 [LoginFailedException.killBot]).
+     * 例如抛出 [RetryLaterException] 可让 bot 重新进行一次登录.
+     *
+     * 抛出任意其他 [Throwable] 将视为验证码解决器的自身错误.
      *
      * @throws LoginFailedException
      * @return 验证码解决成功后获得的 ticket.
@@ -51,14 +64,45 @@ public actual abstract class LoginSolver public actual constructor() {
     public actual abstract suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String?
 
     /**
+     * 处理设备验证.
+     *
+     * ## 异常类型
+     *
+     * 抛出一个 [LoginFailedException] 以正常地终止登录, 并可建议系统进行重连或停止 bot (通过 [LoginFailedException.killBot]).
+     * 例如抛出 [RetryLaterException] 可让 bot 重新进行一次登录.
+     *
+     * 抛出任意其他 [Throwable] 将视为验证码解决器的自身错误.
+     *
+     * @return 验证结果, 可通过解决 [DeviceVerificationRequests] 获得.
+     * @throws LoginFailedException
+     * @since 2.14
+     */
+    public actual open suspend fun onSolveDeviceVerification(
+        bot: Bot,
+        requests: DeviceVerificationRequests,
+    ): DeviceVerificationResult = commonOnSolveDeviceVerification(bot, requests)
+
+    /**
      * 处理不安全设备验证.
      *
      * 返回值保留给将来使用. 目前在处理完成后返回任意内容 (包含 `null`) 均视为处理成功.
-     * 抛出一个 [LoginFailedException] 以正常地终止登录, 抛出任意其他 [Exception] 将视为异常终止.
+     *
+     * ## 异常类型
+     *
+     * 抛出一个 [LoginFailedException] 以正常地终止登录, 并可建议系统进行重连或停止 bot (通过 [LoginFailedException.killBot]).
+     * 例如抛出 [RetryLaterException] 可让 bot 重新进行一次登录.
+     *
+     * 抛出任意其他 [Throwable] 将视为验证码解决器的自身错误.
      *
      * @return 任意内容. 返回值保留以供未来更新.
      * @throws LoginFailedException
      */
+    @Deprecated(
+        "Please use onSolveDeviceVerification instead",
+        level = DeprecationLevel.WARNING, replaceWith =
+        ReplaceWith("onSolveDeviceVerification(bot, url, null)")
+    )
+    @DeprecatedSinceMirai(warningSince = "2.13") // for hidden
     public actual abstract suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String?
 
     public actual companion object {
