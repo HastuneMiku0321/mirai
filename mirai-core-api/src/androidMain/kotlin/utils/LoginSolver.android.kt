@@ -75,7 +75,7 @@ public actual abstract class LoginSolver public actual constructor() {
      *
      * @return 验证结果, 可通过解决 [DeviceVerificationRequests] 获得.
      * @throws LoginFailedException
-     * @since 2.14
+     * @since 2.13
      */
     public actual open suspend fun onSolveDeviceVerification(
         bot: Bot,

@@ -75,7 +75,7 @@ public expect abstract class LoginSolver() {
      *
      * @since 验证结果, 可通过解决 [DeviceVerificationRequests] 获得.
      * @throws LoginFailedException
-     * @since 2.14
+     * @since 2.13
      */
     public open suspend fun onSolveDeviceVerification(
         bot: Bot,
@@ -130,7 +130,7 @@ public expect abstract class LoginSolver() {
  * 属性 [sms] 为短信验证码验证方式, [fallback] 为其他验证方式.
  * 两个属性至少有一个不为 `null`, 在不为 `null` 时表示支持该验证方式. 可任意选用偏好的验证方式.
  *
- * @since 2.14
+ * @since 2.13
  */
 @NotStableForInheritance
 public interface DeviceVerificationRequests {
@@ -153,7 +153,7 @@ public interface DeviceVerificationRequests {
 /**
  * 服务器要求短信验证时提供的账号绑定的手机信息. 使用 [requestSms] 来请求发送验证码
  *
- * @since 2.14
+ * @since 2.13
  * @see LoginSolver.onSolveDeviceVerification
  */
 @NotStableForInheritance
@@ -187,7 +187,7 @@ public interface SmsRequest {
 /**
  * 其他验证方式.
  *
- * @since 2.14
+ * @since 2.13
  * @see LoginSolver.onSolveDeviceVerification
  */
 @NotStableForInheritance
@@ -206,7 +206,7 @@ public interface FallbackRequest {
 /**
  * 设备验证的验证结果. 请不要自行实现此接口, 而是通过解决 [DeviceVerificationRequests] 中的其中一种验证获得.
  *
- * @since 2.14
+ * @since 2.13
  * @see LoginSolver.onSolveDeviceVerification
  */
 @NotStableForInheritance

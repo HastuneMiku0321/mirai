@@ -62,7 +62,7 @@ public class NoStandardInputForCaptchaException @MiraiInternalApi constructor(
 
 /**
  * 需要强制短信验证, 且当前 [LoginSolver] 不支持时抛出.
- * @since 2.14
+ * @since 2.13
  */
 public class UnsupportedSmsLoginException(message: String?) : LoginFailedException(true, message)
 
