@@ -29,7 +29,6 @@ import net.mamoe.mirai.internal.utils.printStructure
 import net.mamoe.mirai.network.RetryLaterException
 import net.mamoe.mirai.network.WrongPasswordException
 import net.mamoe.mirai.utils.*
-import net.mamoe.mirai.utils.structureToString
 
 
 internal class SmsVerifyInfo(
@@ -98,36 +97,6 @@ internal class WtLogin {
      * OicqRequest
      */
     internal object Login : OutgoingPacketFactory<Login.LoginPacketResponse>("wtlogin.login"), WtLoginExt {
-
-        /**
-         * 提交 SMS
-         */
-        object SubCommand7 {
-            operator fun invoke(
-                client: QQAndroidClient
-            ) = buildLoginOutgoingPacket(client, bodyType = 2) { sequenceId ->
-                writeSsoPacket(
-                    client,
-                    client.subAppId,
-                    commandName,
-                    sequenceId = sequenceId,
-                    unknownHex = "01 00 00 00 00 00 00 00 00 00 01 00"
-                ) {
-                    writeOicqRequestPacket(client, commandId = 0x0810) {
-                        writeShort(8) // subCommand
-                        writeShort(6) // count of TLVs, probably ignored by server?
-                        t8(2052)
-                        t104(client.t104)
-                        t116(client.miscBitMap, client.subSigMap)
-                        t174(EMPTY_BYTE_ARRAY)
-                        t17a(9)
-                        t197()
-                        //t401(md5(client.device.guid + "12 34567890123456".toByteArray() + t402))
-                        //t19e(0)//==tlv408
-                    }
-                }
-            }
-        }
 
         /**
          * Check SMS Login
