@@ -5940,9 +5940,21 @@ public final class net/mamoe/mirai/utils/DeviceInfoKt {
 }
 
 public abstract interface class net/mamoe/mirai/utils/DeviceVerificationRequests {
-	public abstract fun getFallback ()Lnet/mamoe/mirai/utils/FallbackRequest;
+	public abstract fun getFallback ()Lnet/mamoe/mirai/utils/DeviceVerificationRequests$FallbackRequest;
 	public abstract fun getPreferSms ()Z
-	public abstract fun getSms ()Lnet/mamoe/mirai/utils/SmsRequest;
+	public abstract fun getSms ()Lnet/mamoe/mirai/utils/DeviceVerificationRequests$SmsRequest;
+}
+
+public abstract interface class net/mamoe/mirai/utils/DeviceVerificationRequests$FallbackRequest {
+	public abstract fun getUrl ()Ljava/lang/String;
+	public abstract fun solved ()Lnet/mamoe/mirai/utils/DeviceVerificationResult;
+}
+
+public abstract interface class net/mamoe/mirai/utils/DeviceVerificationRequests$SmsRequest {
+	public abstract fun getCountryCode ()Ljava/lang/String;
+	public abstract fun getPhoneNumber ()Ljava/lang/String;
+	public abstract fun requestSms (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun solved (Ljava/lang/String;)Lnet/mamoe/mirai/utils/DeviceVerificationResult;
 }
 
 public abstract interface class net/mamoe/mirai/utils/DeviceVerificationResult {
@@ -6092,11 +6104,6 @@ public final class net/mamoe/mirai/utils/ExternalResource$Companion {
 public final class net/mamoe/mirai/utils/ExternalResourceKt {
 	public static final fun runAutoClose (Lnet/mamoe/mirai/utils/ExternalResource;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 	public static final fun useAutoClose (Lnet/mamoe/mirai/utils/ExternalResource;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
-}
-
-public abstract interface class net/mamoe/mirai/utils/FallbackRequest {
-	public abstract fun getUrl ()Ljava/lang/String;
-	public abstract fun solved ()Lnet/mamoe/mirai/utils/DeviceVerificationResult;
 }
 
 public abstract interface class net/mamoe/mirai/utils/FileCacheStrategy {
@@ -6519,14 +6526,6 @@ public final class net/mamoe/mirai/utils/SingleFileLogger : net/mamoe/mirai/util
 	public fun warning (Ljava/lang/String;)V
 	public fun warning (Ljava/lang/String;Ljava/lang/Throwable;)V
 	public fun warning (Ljava/lang/Throwable;)V
-}
-
-public abstract interface class net/mamoe/mirai/utils/SmsRequest {
-	public abstract fun getCountryCode ()Ljava/lang/String;
-	public abstract fun getPhoneNumber ()Ljava/lang/String;
-	public fun requestSms ()V
-	public abstract fun requestSms (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public abstract fun solved (Ljava/lang/String;)Lnet/mamoe/mirai/utils/DeviceVerificationResult;
 }
 
 public final class net/mamoe/mirai/utils/Utils {
