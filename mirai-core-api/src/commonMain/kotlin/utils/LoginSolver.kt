@@ -7,6 +7,8 @@
  * https://github.com/mamoe/mirai/blob/dev/LICENSE
  */
 
+@file:JvmName("LoginSolver_common")
+
 package net.mamoe.mirai.utils
 
 import me.him188.kotlin.jvm.blocking.bridge.JvmBlockingBridge
@@ -16,6 +18,7 @@ import net.mamoe.mirai.network.RetryLaterException
 import net.mamoe.mirai.network.UnsupportedSmsLoginException
 import net.mamoe.mirai.utils.LoginSolver.Companion.Default
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmName
 
 /**
  * 验证码, 设备锁解决器
@@ -23,7 +26,7 @@ import kotlin.jvm.JvmField
  * @see Default
  * @see BotConfiguration.loginSolver
  */
-public expect abstract class LoginSolver() {
+public abstract class LoginSolver {
     /**
      * 处理图片验证码, 返回图片验证码内容.
      *
@@ -44,7 +47,7 @@ public expect abstract class LoginSolver() {
      * 为 `true` 表示支持滑动验证码, 遇到滑动验证码时 mirai 会请求 [onSolveSliderCaptcha].
      * 否则会跳过滑动验证码并告诉服务器此客户端不支持, 有可能导致登录失败
      */
-    public open val isSliderCaptchaSupported: Boolean
+    public open val isSliderCaptchaSupported: Boolean get() = PlatformLoginSolverImplementations.isSliderCaptchaSupported
 
     /**
      * 处理滑动验证码.
@@ -80,7 +83,14 @@ public expect abstract class LoginSolver() {
     public open suspend fun onSolveDeviceVerification(
         bot: Bot,
         requests: DeviceVerificationRequests,
-    ): DeviceVerificationResult
+    ): DeviceVerificationResult {
+        requests.fallback?.let { fallback ->
+            @Suppress("DEPRECATION")
+            (onSolveUnsafeDeviceLoginVerify(bot, fallback.url))
+            return fallback.solved()
+        }
+        throw UnsupportedSmsLoginException("This login session requires SMS verification, but current LoginSolver($this) does not support it.")
+    }
 
     /**
      * 处理不安全设备验证.
@@ -118,12 +128,18 @@ public expect abstract class LoginSolver() {
          * @return `SwingSolver` 或 `StandardCharImageLoginSolver` 或 `null`
          */
         @JvmField
-        public val Default: LoginSolver?
+        public val Default: LoginSolver? = PlatformLoginSolverImplementations.default
 
         @Suppress("unused")
         @Deprecated("Binary compatibility", level = DeprecationLevel.HIDDEN)
-        public fun getDefault(): LoginSolver
+        public fun getDefault(): LoginSolver = Default
+            ?: error("LoginSolver is not provided by default on your platform. Please specify by BotConfiguration.loginSolver")
     }
+}
+
+internal expect object PlatformLoginSolverImplementations {
+    val isSliderCaptchaSupported: Boolean
+    val default: LoginSolver?
 }
 
 /**
@@ -148,59 +164,60 @@ public interface DeviceVerificationRequests {
      * 服务器要求使用短信验证码. 此时可能仍可以尝试 [fallback].
      */
     public val preferSms: Boolean
-}
 
-/**
- * 服务器要求短信验证时提供的账号绑定的手机信息. 使用 [requestSms] 来请求发送验证码
- *
- * @since 2.13
- * @see LoginSolver.onSolveDeviceVerification
- */
-@NotStableForInheritance
-public interface SmsRequest {
-    /**
-     * 手机号归属国家代码, 如中国为 86.
-     * 在获取失败时会返回 `null`，但通常会获取到
-     */
-    public val countryCode: String?
 
     /**
-     * 手机号码, 部分数字会被隐藏, 示例: `123*******1`.
-     * 在获取失败时会返回 `null`, 但通常会获取到
-     */
-    public val phoneNumber: String?
-
-    /**
-     * 请求服务器发送短信到验证手机号
+     * 服务器要求短信验证时提供的账号绑定的手机信息. 使用 [requestSms] 来请求发送验证码
      *
-     * @throws RetryLaterException 当请求过于频繁, 服务器拒绝请求时抛出
+     * @since 2.13
+     * @see LoginSolver.onSolveDeviceVerification
      */
-    @JvmBlockingBridge
-    public suspend fun requestSms()
+    @NotStableForInheritance
+    public interface SmsRequest {
+        /**
+         * 手机号归属国家代码, 如中国为 86.
+         * 在获取失败时会返回 `null`，但通常会获取到
+         */
+        public val countryCode: String?
+
+        /**
+         * 手机号码, 部分数字会被隐藏, 示例: `123*******1`.
+         * 在获取失败时会返回 `null`, 但通常会获取到
+         */
+        public val phoneNumber: String?
+
+        /**
+         * 请求服务器发送短信到验证手机号
+         *
+         * @throws RetryLaterException 当请求过于频繁, 服务器拒绝请求时抛出
+         */
+        @JvmBlockingBridge
+        public suspend fun requestSms()
+
+        /**
+         * 通知此请求已被解决. 获取 [DeviceVerificationResult] 用于返回 [LoginSolver.onSolveDeviceVerification].
+         */
+        public fun solved(code: String): DeviceVerificationResult
+    }
 
     /**
-     * 通知此请求已被解决. 获取 [DeviceVerificationResult] 用于返回 [LoginSolver.onSolveDeviceVerification].
+     * 其他验证方式.
+     *
+     * @since 2.13
+     * @see LoginSolver.onSolveDeviceVerification
      */
-    public fun solved(code: String): DeviceVerificationResult
-}
+    @NotStableForInheritance
+    public interface FallbackRequest {
+        /**
+         * HTTP URL. 可能需要在 QQ 浏览器中打开并人工操作. 在不为 `null` 时表示支持该验证方式.
+         */
+        public val url: String
 
-/**
- * 其他验证方式.
- *
- * @since 2.13
- * @see LoginSolver.onSolveDeviceVerification
- */
-@NotStableForInheritance
-public interface FallbackRequest {
-    /**
-     * HTTP URL. 可能需要在 QQ 浏览器中打开并人工操作. 在不为 `null` 时表示支持该验证方式.
-     */
-    public val url: String
-
-    /**
-     * 通知此请求已被解决. 获取 [DeviceVerificationResult] 用于返回 [LoginSolver.onSolveDeviceVerification].
-     */
-    public fun solved(): DeviceVerificationResult
+        /**
+         * 通知此请求已被解决. 获取 [DeviceVerificationResult] 用于返回 [LoginSolver.onSolveDeviceVerification].
+         */
+        public fun solved(): DeviceVerificationResult
+    }
 }
 
 /**
@@ -211,15 +228,3 @@ public interface FallbackRequest {
  */
 @NotStableForInheritance
 public interface DeviceVerificationResult
-
-internal suspend fun LoginSolver.commonOnSolveDeviceVerification(
-    bot: Bot,
-    request: DeviceVerificationRequests,
-): DeviceVerificationResult {
-    request.fallback?.let { fallback ->
-        @Suppress("DEPRECATION")
-        this.onSolveUnsafeDeviceLoginVerify(bot, fallback.url)
-        return fallback.solved()
-    }
-    throw UnsupportedSmsLoginException("This login session requires SMS verification, but current LoginSolver($this) does not support it.")
-}

@@ -14,7 +14,9 @@ package net.mamoe.mirai.utils
  * @author Karlatemp <karlatemp@vip.qq.com> <https://github.com/Karlatemp>
  */
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import net.mamoe.mirai.Bot
 import java.awt.*
 import java.awt.event.*
@@ -98,6 +100,7 @@ public object SwingSolver : LoginSolver() {
         return@coroutineScope solver.openAndWait().takeIf { it.isNotEmpty() }
     }
 
+    @Suppress("DuplicatedCode")
     override suspend fun onSolveDeviceVerification(
         bot: Bot,
         requests: DeviceVerificationRequests
@@ -121,17 +124,18 @@ public object SwingSolver : LoginSolver() {
         return solveFallback(bot, url)
     }
 
-    private suspend fun solveSms(bot: Bot, request: SmsRequest): DeviceVerificationResult? = coroutineScope {
-        val smsRequester = object {
-            var lastRequested = 0L
+    private suspend fun solveSms(bot: Bot, request: DeviceVerificationRequests.SmsRequest): DeviceVerificationResult? =
+        coroutineScope {
+            val smsRequester = object {
+                var lastRequested = 0L
 
-            fun requestSms(parentComponent: Component) = launch {
-                // oh, so shit code
+                fun requestSms(parentComponent: Component) = launch {
+                    // oh, so shit code
 
-                val diff = (System.currentTimeMillis() - lastRequested).milliseconds
-                if (diff < 1.minutes) {
-                    parentComponent.createTip(
-                        """请求过于频繁, 请在 ${1.minutes - diff} 秒后再试""".trimIndent()
+                    val diff = (System.currentTimeMillis() - lastRequested).milliseconds
+                    if (diff < 1.minutes) {
+                        parentComponent.createTip(
+                            """请求过于频繁, 请在 ${1.minutes - diff} 秒后再试""".trimIndent()
                     ).openAndWait()
                     return@launch
                 }
@@ -220,7 +224,6 @@ public object SwingSolver : LoginSolver() {
 // 隔离类代码
 // 在 jvm 中, 使用 WindowHelperJvm 不会加载 SwingSolverKt
 // 不会触发各种 NoDefClassError
-@Suppress("DEPRECATION")
 internal object WindowHelperJvm {
     enum class PlatformKind {
         ANDROID,

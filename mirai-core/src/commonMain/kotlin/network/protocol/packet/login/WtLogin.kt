@@ -36,7 +36,7 @@ internal class SmsVerifyInfo(
     override val phoneNumber: String?, // 123*******1
     private val token: ByteArray, // t174
     private val bot: AbstractBot,
-) : SmsRequest {
+) : DeviceVerificationRequests.SmsRequest {
     override suspend fun requestSms() {
         val result = try {
             bot.network.sendAndExpect(WtLogin8(bot.client, token))
@@ -69,7 +69,7 @@ internal class SmsVerifyInfo(
     }
 }
 
-internal class FallbackRequestImpl(override val url: String) : FallbackRequest {
+internal class FallbackRequestImpl(override val url: String) : DeviceVerificationRequests.FallbackRequest {
     override fun solved(): DeviceVerificationResult {
         return UrlDeviceVerificationResult
     }
@@ -284,8 +284,10 @@ internal class WtLogin {
                 bot,
                 message = message,
                 requests = object : DeviceVerificationRequests {
-                    override val sms: SmsRequest? = t174?.let { SmsVerifyInfo(countryCode, phoneNumber, t174, bot) }
-                    override val fallback: FallbackRequest? = url?.let { FallbackRequestImpl(it) }
+                    override val sms: DeviceVerificationRequests.SmsRequest? =
+                        t174?.let { SmsVerifyInfo(countryCode, phoneNumber, t174, bot) }
+                    override val fallback: DeviceVerificationRequests.FallbackRequest? =
+                        url?.let { FallbackRequestImpl(it) }
                     override val preferSms: Boolean = tlvMap[0x17b] != null
                 },
             )

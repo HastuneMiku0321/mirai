@@ -16,11 +16,11 @@ import net.mamoe.mirai.internal.network.protocol.packet.*
 import net.mamoe.mirai.internal.network.protocol.packet.login.WtLogin
 import net.mamoe.mirai.internal.network.subAppId
 import net.mamoe.mirai.internal.network.subSigMap
-import net.mamoe.mirai.utils.SmsRequest
+import net.mamoe.mirai.utils.DeviceVerificationRequests
 
 /**
  * Submit SMS.
- * @see SmsRequest.requestSms
+ * @see DeviceVerificationRequests.SmsRequest.requestSms
  */
 internal object WtLogin7 : WtLoginExt {
     operator fun invoke(

@@ -19,10 +19,7 @@ import kotlinx.coroutines.withContext
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.internal.utils.SeleniumLoginSolver
 import net.mamoe.mirai.internal.utils.isSliderCaptchaSupportKind
-import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.network.NoStandardInputForCaptchaException
-import net.mamoe.mirai.network.RetryLaterException
-import net.mamoe.mirai.utils.LoginSolver.Companion.Default
 import net.mamoe.mirai.utils.StandardCharImageLoginSolver.Companion.createBlocking
 import java.awt.Image
 import java.awt.image.BufferedImage
@@ -31,110 +28,10 @@ import javax.imageio.ImageIO
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-
-/**
- * 验证码, 设备锁解决器
- *
- * @see Default
- * @see BotConfiguration.loginSolver
- */
-public actual abstract class LoginSolver public actual constructor() {
-    /**
-     * 处理图片验证码, 返回图片验证码内容.
-     *
-     * 返回 `null` 以表示无法处理验证码, 将会刷新验证码或重试登录.
-     *
-     * ## 异常类型
-     *
-     * 抛出一个 [LoginFailedException] 以正常地终止登录, 并可建议系统进行重连或停止 bot (通过 [LoginFailedException.killBot]).
-     * 例如抛出 [RetryLaterException] 可让 bot 重新进行一次登录.
-     *
-     * 抛出任意其他 [Throwable] 将视为验证码解决器的自身错误.
-     *
-     * @throws LoginFailedException
-     */
-    public actual abstract suspend fun onSolvePicCaptcha(bot: Bot, data: ByteArray): String?
-
-    /**
-     * 为 `true` 表示支持滑动验证码, 遇到滑动验证码时 mirai 会请求 [onSolveSliderCaptcha].
-     * 否则会跳过滑动验证码并告诉服务器此客户端不支持, 有可能导致登录失败
-     */
-    public actual open val isSliderCaptchaSupported: Boolean
-        get() = isSliderCaptchaSupportKind ?: true
-
-    /**
-     * 处理滑动验证码.
-     *
-     * 返回 `null` 以表示无法处理验证码, 将会刷新验证码或重试登录.
-     *
-     * ## 异常类型
-     *
-     * 抛出一个 [LoginFailedException] 以正常地终止登录, 并可建议系统进行重连或停止 bot (通过 [LoginFailedException.killBot]).
-     * 例如抛出 [RetryLaterException] 可让 bot 重新进行一次登录.
-     *
-     * 抛出任意其他 [Throwable] 将视为验证码解决器的自身错误.
-     *
-     * @throws LoginFailedException
-     * @return 验证码解决成功后获得的 ticket.
-     */
-    public actual abstract suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String?
-
-    /**
-     * 处理设备验证.
-     *
-     * ## 异常类型
-     *
-     * 抛出一个 [LoginFailedException] 以正常地终止登录, 并可建议系统进行重连或停止 bot (通过 [LoginFailedException.killBot]).
-     * 例如抛出 [RetryLaterException] 可让 bot 重新进行一次登录.
-     *
-     * 抛出任意其他 [Throwable] 将视为验证码解决器的自身错误.
-     *
-     * @since 验证结果, 可通过解决 [DeviceVerificationRequests] 获得.
-     * @throws LoginFailedException
-     * @since 2.13
-     */
-    public actual open suspend fun onSolveDeviceVerification(
-        bot: Bot,
-        requests: DeviceVerificationRequests,
-    ): DeviceVerificationResult = commonOnSolveDeviceVerification(bot, requests)
-
-    /**
-     * 处理不安全设备验证.
-     *
-     * 返回值保留给将来使用. 目前在处理完成后返回任意内容 (包含 `null`) 均视为处理成功.
-     *
-     * ## 异常类型
-     *
-     * 抛出一个 [LoginFailedException] 以正常地终止登录, 并可建议系统进行重连或停止 bot (通过 [LoginFailedException.killBot]).
-     * 例如抛出 [RetryLaterException] 可让 bot 重新进行一次登录.
-     *
-     * 抛出任意其他 [Throwable] 将视为验证码解决器的自身错误.
-     *
-     * @return 任意内容. 返回值保留以供未来更新.
-     * @throws LoginFailedException
-     */
-    @Deprecated(
-        "Please use onSolveDeviceVerification instead",
-        level = DeprecationLevel.WARNING, replaceWith =
-        ReplaceWith("onSolveDeviceVerification(bot, url, null)")
-    )
-    @DeprecatedSinceMirai(warningSince = "2.13") // for hidden
-    public actual abstract suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String?
-
-    public actual companion object {
-        /**
-         * 当前平台默认的 [LoginSolver]。
-         *
-         * 检测策略:
-         * 1. 检测 `android.util.Log`, 如果存在, 返回 `null`.
-         * 2. 检测 JVM 属性 `mirai.no-desktop`. 若存在, 返回 [StandardCharImageLoginSolver]
-         * 3. 检测 JVM 桌面环境, 若支持, 返回 [SwingSolver]
-         * 4. 返回 [StandardCharImageLoginSolver]
-         *
-         * @return [SwingSolver] 或 [StandardCharImageLoginSolver] 或 `null`
-         */
-        @JvmField
-        public actual val Default: LoginSolver? = when (WindowHelperJvm.platformKind) {
+internal actual object PlatformLoginSolverImplementations {
+    actual val isSliderCaptchaSupported: Boolean get() = isSliderCaptchaSupportKind ?: true
+    actual val default: LoginSolver? by lazy {
+        when (WindowHelperJvm.platformKind) {
             WindowHelperJvm.PlatformKind.ANDROID -> null
             WindowHelperJvm.PlatformKind.SWING -> {
                 when (isSliderCaptchaSupportKind) {
@@ -144,15 +41,8 @@ public actual abstract class LoginSolver public actual constructor() {
             }
             WindowHelperJvm.PlatformKind.CLI -> StandardCharImageLoginSolver()
         }
-
-        @Suppress("unused")
-        @Deprecated("Binary compatibility", level = DeprecationLevel.HIDDEN)
-        public actual fun getDefault(): LoginSolver = Default
-            ?: error("LoginSolver is not provided by default on your platform. Please specify by BotConfiguration.loginSolver")
     }
-
 }
-
 
 /**
  * CLI 环境 [LoginSolver]. 将验证码图片转为字符画并通过 `output` 输出, [input] 获取用户输入.
@@ -255,9 +145,9 @@ public class StandardCharImageLoginSolver @JvmOverloads constructor(
         }
     }
 
+    @Suppress("DuplicatedCode")
     override suspend fun onSolveDeviceVerification(
-        bot: Bot,
-        requests: DeviceVerificationRequests
+        bot: Bot, requests: DeviceVerificationRequests
     ): DeviceVerificationResult {
         val logger = loggerSupplier(bot)
         requests.sms?.let { req ->
@@ -270,38 +160,35 @@ public class StandardCharImageLoginSolver @JvmOverloads constructor(
         error("User rejected SMS login while fallback login method not available.")
     }
 
-    private suspend fun solveSms(logger: MiraiLogger, request: SmsRequest): DeviceVerificationResult? =
-        loginSolverLock.withLock {
-            val countryCode = request.countryCode
-            val phoneNumber = request.phoneNumber
-            if (countryCode != null && phoneNumber != null) {
-                logger.info("一条短信验证码将发送到你的手机 (+$countryCode) $phoneNumber. 运营商可能会收取正常短信费用, 是否继续? 输入 yes 继续, 输入其他终止并尝试其他验证方式.")
-                logger.info(
-                    "A verification code will be send to your phone (+$countryCode) $phoneNumber, " +
-                            "which may be charged normally, " +
-                            "do you wish to continue? Type yes to continue, type others to cancel and try other methods."
-                )
-            } else {
-                logger.info("一条短信验证码将发送到你的手机 (无法获取到手机号码). 运营商可能会收取正常短信费用, 是否继续? 输入 yes 继续, 输入其他终止并尝试其他验证方式.")
-                logger.info(
-                    "A verification code will be send to your phone (failed to get phone number), " +
-                            "which may be charged normally by your carrier, " +
-                            "do you wish to continue? Type yes to continue, type others to cancel and try other methods."
-                )
-            }
-            val answer = input().trim()
-            return if (answer.equals("yes", ignoreCase = true)) {
-                logger.info("Attempting SMS verification.")
-                request.requestSms()
-                logger.info("Please enter code: ")
-                val code = input().trim()
-                logger.info("Continuing with code '$code'.")
-                request.solved(code)
-            } else {
-                logger.info("Cancelled.")
-                null
-            }
+    private suspend fun solveSms(
+        logger: MiraiLogger, request: DeviceVerificationRequests.SmsRequest
+    ): DeviceVerificationResult? = loginSolverLock.withLock {
+        val countryCode = request.countryCode
+        val phoneNumber = request.phoneNumber
+        if (countryCode != null && phoneNumber != null) {
+            logger.info("一条短信验证码将发送到你的手机 (+$countryCode) $phoneNumber. 运营商可能会收取正常短信费用, 是否继续? 输入 yes 继续, 输入其他终止并尝试其他验证方式.")
+            logger.info(
+                "A verification code will be send to your phone (+$countryCode) $phoneNumber, which may be charged normally, do you wish to continue? Type yes to continue, type others to cancel and try other methods."
+            )
+        } else {
+            logger.info("一条短信验证码将发送到你的手机 (无法获取到手机号码). 运营商可能会收取正常短信费用, 是否继续? 输入 yes 继续, 输入其他终止并尝试其他验证方式.")
+            logger.info(
+                "A verification code will be send to your phone (failed to get phone number), " + "which may be charged normally by your carrier, " + "do you wish to continue? Type yes to continue, type others to cancel and try other methods."
+            )
         }
+        val answer = input().trim()
+        return if (answer.equals("yes", ignoreCase = true)) {
+            logger.info("Attempting SMS verification.")
+            request.requestSms()
+            logger.info("Please enter code: ")
+            val code = input().trim()
+            logger.info("Continuing with code '$code'.")
+            request.solved(code)
+        } else {
+            logger.info("Cancelled.")
+            null
+        }
+    }
 
     @Deprecated(
         "Please use onSolveDeviceVerification instead",
@@ -312,8 +199,7 @@ public class StandardCharImageLoginSolver @JvmOverloads constructor(
         solveFallback(loggerSupplier(bot), url)
 
     private suspend fun solveFallback(
-        logger: MiraiLogger,
-        url: String
+        logger: MiraiLogger, url: String
     ): String {
         return loginSolverLock.withLock {
             logger.info { "[UnsafeLogin] 当前登录环境不安全，服务器要求账户认证。请在 QQ 浏览器打开 $url 并完成验证后输入任意字符。" }
