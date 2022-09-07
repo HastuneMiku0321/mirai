@@ -67,11 +67,19 @@ internal class SmsVerifyInfo(
     override fun solved(code: String): DeviceVerificationResult {
         return SmsDeviceVerificationResult(code, token)
     }
+
+    override fun toString(): String {
+        return "SmsVerifyInfo(+$countryCode $phoneNumber)"
+    }
 }
 
 internal class FallbackRequestImpl(override val url: String) : DeviceVerificationRequests.FallbackRequest {
     override fun solved(): DeviceVerificationResult {
         return UrlDeviceVerificationResult
+    }
+
+    override fun toString(): String {
+        return "FallbackRequestImpl($url)"
     }
 }
 
@@ -174,7 +182,7 @@ internal class WtLogin {
                 val requests: DeviceVerificationRequests,
             ) : LoginPacketResponse() {
                 override fun toString(): String =
-                    "LoginPacketResponse.VerificationNeeded(requests=requests)"
+                    "LoginPacketResponse.VerificationNeeded(requests=$requests)"
             }
 
             class DeviceLockLogin(
@@ -289,6 +297,9 @@ internal class WtLogin {
                     override val fallback: DeviceVerificationRequests.FallbackRequest? =
                         url?.let { FallbackRequestImpl(it) }
                     override val preferSms: Boolean = tlvMap[0x17b] != null
+                    override fun toString(): String {
+                        return "DeviceVerificationRequests(sms=$sms, preferSms=$preferSms, fallback=$fallback)"
+                    }
                 },
             )
         }
