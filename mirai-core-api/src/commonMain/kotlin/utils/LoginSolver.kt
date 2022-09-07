@@ -209,7 +209,7 @@ public interface DeviceVerificationRequests {
     @NotStableForInheritance
     public interface FallbackRequest {
         /**
-         * HTTP URL. 可能需要在 QQ 浏览器中打开并人工操作. 在不为 `null` 时表示支持该验证方式.
+         * HTTP URL. 可能需要在 QQ 浏览器中打开并人工操作.
          */
         public val url: String
 
